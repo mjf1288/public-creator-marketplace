@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.public.com/schemas/creator/v1/order-proposal.json",
+  "title": "Order Proposal",
+  "description": "One per subscription per signal. Sizing is computed from the subscription, never from the signal. There is no transition from NOTIFIED or EXPIRED to SUBMITTED.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proposal_id", "signal_id", "subscription_id", "account_id", "state", "created_at"],
+  "properties": {
+    "proposal_id": { "type": "string", "format": "uuid" },
+    "signal_id": { "type": "string", "format": "uuid" },
+    "subscription_id": { "type": "string", "format": "uuid" },
+    "account_id": { "type": "string" },
+    "state": {
+      "enum": ["CREATED", "NOTIFIED", "CONFIRMED", "SUBMITTED", "FILLED", "PARTIAL", "REJECTED", "DECLINED", "EXPIRED", "SKIPPED", "VOIDED"]
+    },
+    "order": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Mapped onto the existing Public order API. No new order primitives required for phase one.",
+      "properties": {
+        "instrument_type": { "enum": ["EQUITY", "OPTION"] },
+        "symbol": { "type": "string" },
+        "side": { "enum": ["BUY", "SELL"] },
+        "order_type": { "enum": ["LIMIT", "MARKET", "STOP", "STOP_LIMIT"] },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "amount": { "type": "number", "exclusiveMinimum": 0 },
+        "limit_price": { "type": "number", "exclusiveMinimum": 0 },
+        "stop_price": { "type": "number", "exclusiveMinimum": 0 },
+        "time_in_force": { "enum": ["DAY", "GTC"] },
+        "session": { "enum": ["CORE", "EXTENDED"] },
+        "open_close": { "enum": ["OPEN", "CLOSE"] }
+      },
+      "oneOf": [{ "required": ["quantity"] }, { "required": ["amount"] }]
+    },
+    "sizing_explanation": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Rendered on the confirm screen. A subscriber must never see a bare quantity. Example: '3 shares - 2% of $18,400 buying power'."
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "estimated_cost": { "type": "number" },
+        "estimated_fees": { "type": "number" },
+        "buying_power_before": { "type": "number" },
+        "buying_power_after": { "type": "number" },
+        "evaluated_at": { "type": "string", "format": "date-time" }
+      },
+      "description": "Populated asynchronously at fan-out so fan-out is not serialized behind it, and re-run immediately before submission."
+    },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "notified_at": { "type": "string", "format": "date-time" },
+    "confirmed_at": { "type": "string", "format": "date-time" },
+    "submitted_at": { "type": "string", "format": "date-time" },
+    "broker_order_id": { "type": "string" },
+    "client_order_id": {
+      "type": "string",
+      "description": "Derived deterministically from proposal_id so a confirm retry cannot place a second live order."
+    },
+    "skip_reason": {
+      "enum": ["INSUFFICIENT_BUYING_POWER", "POSITION_CAP", "DAILY_ORDER_CAP", "NOTIONAL_CEILING", "INSTRUMENT_NOT_ALLOWED", "ACCOUNT_RESTRICTED", "MARKET_CLOSED", "PREFLIGHT_FAILED"],
+      "description": "Required when state is SKIPPED. Surfaced to the subscriber as a guardrail working, not an error."
+    },
+    "terminal_reason": { "type": "string", "maxLength": 200 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "SKIPPED" } }, "required": ["state"] },
+      "then": { "required": ["skip_reason"] }
+    },
+    {
+      "if": { "properties": { "state": { "enum": ["SUBMITTED", "FILLED", "PARTIAL"] } }, "required": ["state"] },
+      "then": { "required": ["confirmed_at", "client_order_id"] }
+    }
+  ],
+  "$comment": "The last rule is the load-bearing one: any state at or beyond SUBMITTED must carry a confirmed_at. A submitted proposal with no confirmation timestamp is the discretionary-authority fact pattern and must be structurally impossible."
+}

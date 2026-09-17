@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.public.com/schemas/creator/v1/agent-manifest.json",
+  "title": "Agent Manifest",
+  "description": "A creator's declaration of what an agent does. Enforced by the platform, not merely claimed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "summary", "instrument_scope", "frequency_band", "publishes_outside_core_hours", "default_proposal_ttl_seconds", "exit_policy", "price_cents", "billing_interval", "disclosure_block", "auth_mode"],
+  "properties": {
+    "name": { "type": "string", "minLength": 3, "maxLength": 60 },
+    "summary": { "type": "string", "minLength": 40, "maxLength": 500, "description": "Creator-authored. Reviewed and approved or rejected, never edited by Public." },
+    "instrument_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instrument_types", "options_only_single_leg"],
+      "properties": {
+        "instrument_types": {
+          "type": "array",
+          "items": { "enum": ["EQUITY", "OPTION"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "underlying_allowlist": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 12 },
+          "maxItems": 200,
+          "description": "Optional. Recommended: it makes the agent legible to subscribers. Signals outside scope are rejected 403."
+        },
+        "options_only_single_leg": {
+          "const": true,
+          "description": "Phase one supports single-leg options only. Multi-leg is phase 2."
+        }
+      }
+    },
+    "frequency_band": {
+      "enum": ["LOW", "MEDIUM", "HIGH"],
+      "description": "LOW <10/week, MEDIUM <5/day, HIGH <20/day. Sets rate limits and listing eligibility. LOW and MEDIUM are the target cohorts for propose-and-confirm."
+    },
+    "publishes_outside_core_hours": { "type": "boolean" },
+    "default_proposal_ttl_seconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+    "max_proposal_ttl_seconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+    "exit_policy": {
+      "enum": ["CREATOR_SIGNALS_EXITS", "SUBSCRIBER_MANAGES_EXITS"],
+      "description": "Displayed prominently at subscription. Until brackets ship, a creator-signalled exit still requires a second subscriber confirmation."
+    },
+    "price_cents": { "type": "integer", "minimum": 0, "maximum": 100000 },
+    "billing_interval": { "enum": ["MONTHLY", "ANNUAL"] },
+    "disclosure_block": {
+      "type": "string",
+      "minLength": 200,
+      "maxLength": 4000,
+      "description": "Creator-authored risk disclosure. Public enforces presence and length, and does not supply the content."
+    },
+    "auth_mode": {
+      "enum": ["HMAC", "PATH_TOKEN"],
+      "description": "PATH_TOKEN exists because TradingView webhooks cannot compute an HMAC. Signing required above a subscriber threshold."
+    },
+    "listing_visibility": { "enum": ["PUBLIC", "UNLISTED", "HIDDEN"], "default": "PUBLIC" }
+  }
+}

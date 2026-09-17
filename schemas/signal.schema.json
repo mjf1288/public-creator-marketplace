@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.public.com/schemas/creator/v1/signal.json",
+  "title": "Creator Signal",
+  "description": "A creator's trading intent. Deliberately carries no size, no notional and no account. Presence of any sizing or targeting field is a 422, never a silent ignore.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["idempotency_key", "action", "instrument_type", "symbol"],
+  "properties": {
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Unique per agent. Replay returns the original signal_id. Same key with a different body is a 409."
+    },
+    "action": {
+      "enum": ["ENTRY", "EXIT", "CANCEL"]
+    },
+    "instrument_type": {
+      "enum": ["EQUITY", "OPTION"],
+      "description": "CRYPTO added in phase 1.5. No futures instrument type exists on the order API."
+    },
+    "symbol": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "Ticker for equities. Exact OSI symbol for options, e.g. AAPL260320C00280000. Public never resolves selection criteria into a contract in phase one."
+    },
+    "side": {
+      "enum": ["BUY", "SELL"],
+      "description": "Required for ENTRY and EXIT."
+    },
+    "order_type": {
+      "enum": ["LIMIT", "MARKET", "STOP", "STOP_LIMIT"],
+      "default": "LIMIT"
+    },
+    "limit_price": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Required for LIMIT and STOP_LIMIT. Passed through unchanged; never per-subscriber adjusted."
+    },
+    "stop_price": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Required for STOP and STOP_LIMIT."
+    },
+    "time_in_force": {
+      "enum": ["DAY", "GTC"],
+      "default": "DAY"
+    },
+    "session": {
+      "enum": ["CORE", "EXTENDED"],
+      "default": "CORE"
+    },
+    "open_close": {
+      "enum": ["OPEN", "CLOSE"],
+      "description": "Options only. Required when instrument_type is OPTION."
+    },
+    "position_ref": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "Creator-assigned. Links EXIT and CANCEL to the originating ENTRY. Unknown ref on EXIT is a 422."
+    },
+    "proposal_ttl_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 3600,
+      "description": "Clamped to the agent manifest's max_proposal_ttl_seconds."
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Creator rationale. Rendered verbatim with creator attribution. Never summarized or rewritten by Public."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "action": { "const": "ENTRY" } }, "required": ["action"] },
+      "then": { "required": ["side", "order_type"] }
+    },
+    {
+      "if": { "properties": { "action": { "const": "EXIT" } }, "required": ["action"] },
+      "then": { "required": ["side", "position_ref"] }
+    },
+    {
+      "if": { "properties": { "action": { "const": "CANCEL" } }, "required": ["action"] },
+      "then": { "required": ["position_ref"] }
+    },
+    {
+      "if": { "properties": { "order_type": { "enum": ["LIMIT", "STOP_LIMIT"] } }, "required": ["order_type"] },
+      "then": { "required": ["limit_price"] }
+    },
+    {
+      "if": { "properties": { "order_type": { "enum": ["STOP", "STOP_LIMIT"] } }, "required": ["order_type"] },
+      "then": { "required": ["stop_price"] }
+    },
+    {
+      "if": { "properties": { "instrument_type": { "const": "OPTION" } }, "required": ["instrument_type"] },
+      "then": { "required": ["open_close"] }
+    }
+  ],
+  "$comment": "REJECTED FIELDS — must return 422 with the offending field named, not be dropped: quantity, amount, notional, account_id, percent_of_account, risk_percent, leverage, subscriber_id, target_subscribers. additionalProperties:false enforces this; the error message must name the field so the creator understands sizing is not theirs to set."
+}

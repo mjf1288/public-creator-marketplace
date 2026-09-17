@@ -32,13 +32,35 @@ A creator registers an **agent** — a named signal stream with a declared instr
 | `docs/02-agent-manifest.md` | How a creator declares an agent | Draft |
 | `docs/03-data-model.md` | Entities and the proposal state machine | Draft |
 | `docs/04-order-mapping.md` | Signal intent → Public order API | Draft |
-| `docs/05-confirmation-flow.md` | Subscriber UX, timeout and staleness semantics | To write |
-| `docs/06-performance-methodology.md` | Computing and displaying track records | To write |
-| `docs/07-compliance-controls.md` | Control → rule → engineering requirement | To write |
-| `docs/08-billing.md` | Subscriptions, take rate, payouts | To write |
-| `docs/09-metrics.md` | Instrumentation and success criteria | To write |
-| `docs/10-open-decisions.md` | What needs a decision and from whom | To write |
+| `docs/05-confirmation-flow.md` | Subscriber UX, timeout and staleness semantics | Draft |
+| `docs/06-performance-methodology.md` | Computing and displaying track records | Draft |
+| `docs/07-compliance-controls.md` | Control → rule → engineering requirement | Draft |
+| `docs/08-billing.md` | Subscriptions, take rate, payouts | Draft |
+| `docs/09-metrics.md` | Instrumentation and success criteria | Draft |
+| `docs/10-open-decisions.md` | What needs a decision and from whom | Draft |
 | `schemas/` | JSON Schema for signal, manifest, proposal | Draft |
+
+## Where this sits in the wider plan
+
+The three paths put to Jannick are one pipeline, not alternatives:
+
+- **Webhooks are the acquisition funnel.** Creators already pay third parties to bridge alerts into brokers. Meeting them at the tool they already use is the cheapest way in.
+- **Signal = Agent is the wedge.** This repository. Public is the only venue where the signal, the funded account and the order live together, which is why Public can compute performance instead of the creator claiming it.
+- **An AI-native script language is the moat.** Phase three, and it only matters once the wedge is proven.
+
+The strategic prize is **creator-led account acquisition, not take rate.**
+
+## Why creators should want to run here
+
+| | Whop / Discord | Collective2 | TradingView | **Public** |
+|---|---|---|---|---|
+| Checkout and billing | Yes | Yes | Yes | Yes |
+| Execution in subscriber accounts | No | No | No | **Yes** |
+| Verified track record from real fills | No | Simulated only | No | **Yes** |
+| Fill quality and confirm-rate diagnostics | No | No | No | **Yes** |
+| Take rate | 3–10%+ | 30–50% | 0% promotional | **0% founding, 15% steady** |
+
+The two rows nobody else has a path to are verified performance from real fills and fill-quality feedback. Build those well and the recruiting pitch writes itself. Build them badly and 15% is not defensible.
 
 ## Hard constraints — do not design around these
 
